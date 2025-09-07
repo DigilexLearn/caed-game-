@@ -3,6 +3,9 @@ import { View, Text, StyleSheet, ImageBackground, Alert, ScrollView } from "reac
 import { Audio } from "expo-av";
 import Card from "./Card";
 
+// ✅ sirf helper import karna hai
+import { saveGameProgress } from "../firebase/firebaseHelper";
+
 const levelCards = {
   1: ["🍎", "🍌", "🍎", "🍌"],
   2: ["🍎", "🍌", "🍇", "🍒", "🍎", "🍌", "🍇", "🍒"],
@@ -52,8 +55,12 @@ export default function MemoryGame({ level = 1, onExit }) {
         setLives((l) => {
           if (l - 1 <= 0) {
             playSound(require("../../assets/gameover.mp3"));
+            saveGameProgress({ level, moves, lives, status: "lose" }); // 👈 save lose
             Alert.alert("💀 Game Over", "Out of lives!", [
-              { text: "Restart", onPress: restartGame },
+              { text: "Restart", onPress: () => { 
+                  saveGameProgress({ level, moves, lives, status: "restart" });
+                  restartGame(); 
+                }},
               { text: "Exit", onPress: onExit },
             ]);
             return 0;
@@ -68,6 +75,7 @@ export default function MemoryGame({ level = 1, onExit }) {
   useEffect(() => {
     if (matched.length === cards.length && cards.length > 0) {
       playSound(require("../../assets/win.mp3"));
+      saveGameProgress({ level, moves, lives, status: "win" }); // 👈 save win
       Alert.alert("🎉 You Win!", `Level ${level} completed in ${moves} moves!`, [
         { text: "Next Level", onPress: () => onExit(level + 1) },
         { text: "Exit", onPress: onExit },
@@ -76,12 +84,13 @@ export default function MemoryGame({ level = 1, onExit }) {
   }, [matched]);
 
   const restartGame = () => {
+    saveGameProgress({ level, moves, lives, status: "restart" }); // 👈 log restart
     const shuffled = [...levelCards[level]].sort(() => 0.5 - Math.random());
     setCards(shuffled);
     setFlipped([]);
     setMatched([]);
     setMoves(0);
-    setLives(getLivesForLevel(level)); // 👈 lives reset with new formula
+    setLives(getLivesForLevel(level));
   };
 
   return (
